@@ -1,4 +1,4 @@
-# regexplanet-rust
+# regexplanet-rust [<img align="right" alt="rust icon" height="96" src="https://www.vectorlogo.zone/logos/rust-lang/rust-lang-icon.svg" />](http://www.regexplanet.com/advanced/rust/index.html)
 
 This is the [Rust language](https://www.rust-lang.org/) backend for RegexPlanet, a tool for online regular expression testing.
 
