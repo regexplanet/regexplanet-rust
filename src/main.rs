@@ -45,6 +45,7 @@ struct StatusParams {
 struct StatusInfo {
     success: bool,
     message: String,
+    version: String,
     tech: String,
     timestamp: String,
     lastmod: String,
@@ -60,6 +61,7 @@ async fn get_status(Query(params): Query<StatusParams>) -> Response {
     let status = StatusInfo {
         success: true,
         message: "OK".to_string(),
+        version: format!("{}", version()),
         tech: tech.to_string(),
         timestamp: timestamp.to_string(),
         lastmod: lastmod.to_string(),
