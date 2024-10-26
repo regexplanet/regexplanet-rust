@@ -27,9 +27,11 @@ async fn main() {
     let address = std::env::var("ADDRESS").unwrap_or_else(|_| "0.0.0.0".to_string());
 
     // get port from environment variable
-    let port = std::env::var("PORT").unwrap_or_else(|_| "4000".to_string());
+    let port = std::env::var("PORT").unwrap_or_else(|_| "5000".to_string());
 
     let listen = format!("{}:{}", address, port);
+
+    println!("INFO: Listening on {}", listen);
 
     let listener = tokio::net::TcpListener::bind(listen).await.unwrap();
     axum::serve(listener, app).await.unwrap();
@@ -86,7 +88,7 @@ async fn get_status(Query(params): Query<StatusParams>) -> Response {
 async fn root_handler() -> Response<Body> {
     return Response::builder()
         .header("Content-Type", "text/plain; charset=utf-8")
-        .body(Body::from("Dev server running!"))
+        .body(Body::from(format!("Running Rust {}", version())))
         .unwrap();
 }
 
@@ -196,6 +198,9 @@ fn handle_jsonp(callback: &str, html: String) -> Response<Body> {
     if callback == "" {
         return Response::builder()
             .header("Content-Type", "application/json; charset=utf-8")
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET")
+            .header("Access-Control-Max-Age", "604800")
             .body(Body::from(json_output))
             .unwrap();
     } else {
