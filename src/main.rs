@@ -100,6 +100,7 @@ struct TestInput {
     #[serde(default)]
     callback: String,
     #[serde(default)]
+    #[serde(rename(deserialize = "option"))]
     options: Vec<String>,
     #[serde(default)]
     #[serde(rename(deserialize = "input"))]
@@ -109,7 +110,7 @@ struct TestInput {
 #[derive(Serialize)]
 struct TestOutput {
     success: bool,
-    message: String,
+    message: Option<String>,
     html: String,
 }
 
@@ -130,6 +131,10 @@ async fn test_handler(Form(test_input): Form<TestInput>) -> Response<Body> {
         html.push_str(&format!("\t\t\t<td><code>{}</code></td>\n", encode_text(&test_input.replacement)));
         html.push_str("\t\t</tr>\n");
     }
+
+    // capture_names
+    // captures_len
+    // static_captures_len
 
     html.push_str("\t</tbody>\n");
     html.push_str("</table>");
@@ -163,18 +168,105 @@ async fn test_handler(Form(test_input): Form<TestInput>) -> Response<Body> {
     html.push_str("<table class=\"table table-bordered table-striped\" style=\"width: auto;\">\n");
     html.push_str("\t<thead>\n");
     html.push_str("\t\t<tr>\n");
+    html.push_str("\t\t\t<th>Test</th>\n");
     html.push_str("\t\t\t<th>Input</th>\n");
     html.push_str("\t\t\t<th>is_match</th>\n");
+    html.push_str("\t\t\t<th>find</th>\n");
+    html.push_str("\t\t\t<th>find_iter</th>\n");
+    html.push_str("\t\t\t<th>captures</th>\n");
+    html.push_str("\t\t\t<th>captures_iter</th>\n");
+    html.push_str("\t\t\t<th>split</th>\n");
+    // replace
+    // replace_all
+    // replacen
+    // shortest_match
     html.push_str("\t\t</tr>\n");
     html.push_str("\t</thead>\n");
     html.push_str("\t<tbody>\n");
-
-    for input in test_input.inputs {
-        //let output = the_regex.as_ref().unwrap().replace_all(&input, &test_input.replacement);
+    for (index, input) in test_input.inputs.iter().enumerate() { 
+        if input == "" {
+            continue;
+        }
         html.push_str("\t\t<tr>\n");
+        html.push_str(&format!("\t\t\t<td class=\"text-center\">{}</td>\n", index+1));
         html.push_str(&format!("\t\t\t<td>{}</td>\n", encode_text(&input)));
         let is_match = if the_regex.is_match(&input) { "true" } else { "false" };
         html.push_str(&format!("\t\t\t<td>{}</td>\n", is_match));
+
+        let find = the_regex.find(&input);
+        if find.is_none() {
+            html.push_str("\t\t\t<td><i>(none)</i></td>\n");
+        } else {
+            html.push_str(&format!("\t\t\t<td>{}..{}</td>\n", find.unwrap().start(), find.unwrap().end()));
+        }
+
+        let finds: Vec<_> = the_regex.find_iter(&input).map(|m| m.range()).collect();
+        if finds.len() == 0 {
+            html.push_str("\t\t\t<td><i>(none)</i></td>\n");
+        } else {
+            html.push_str("\t\t\t<td>\n");
+            for (index, found) in finds.iter().enumerate() {
+                html.push_str(&format!("\t\t\t\t[{}]: {}..{}", index, found.start, found.end));
+                if index < finds.len() - 1 {
+                    html.push_str("<br>\n");
+                }
+            }
+            html.push_str("\t\t\t</td>\n");
+        }
+
+        let caps = the_regex.captures(&input);
+        if caps.is_none() {
+            html.push_str("\t\t\t<td><i>(none)</i></td>\n");
+        } else {
+            let caps = caps.unwrap();
+            html.push_str("\t\t\t<td>\n");
+            for (index, cap) in caps.iter().enumerate() {
+                if cap.is_none() {
+                    continue;
+                }
+                let cap = cap.unwrap();
+                html.push_str(&format!("\t\t\t\t[{}]: {} ({}..{})", index, encode_text(cap.as_str()), cap.start(), cap.end()));
+                if index < caps.len() - 1 {
+                    html.push_str("<br>\n");
+                }
+            }
+            html.push_str("\t\t\t</td>\n");
+        }
+
+        let icaps: Vec<_> = the_regex.captures_iter(&input).map(|caps| caps.iter().map(|cap| cap.map(|c| c.as_str()).unwrap_or("")).collect::<Vec<_>>()).collect();
+        if icaps.len() == 0 {
+            html.push_str("\t\t\t<td><i>(none)</i></td>\n");
+        } else {
+            html.push_str("\t\t\t<td>\n");
+            for (index, caps) in icaps.iter().enumerate() {
+                html.push_str(&format!("\t\t\t\t[{}]: ", index));
+                for (index, cap) in caps.iter().enumerate() {
+                    html.push_str(&format!("{}: {}", index, cap));
+                    if index < caps.len() - 1 {
+                        html.push_str(", ");
+                    }
+                }
+                if index < icaps.len() - 1 {
+                    html.push_str("<br>\n");
+                }
+            }
+            html.push_str("\t\t\t</td>\n");
+        }
+
+        let splits: Vec<_> = the_regex.split(&input).collect();
+        if splits.len() == 0 {
+            html.push_str("\t\t\t<td><i>(none)</i></td>\n");
+        } else {
+            html.push_str("\t\t\t<td>\n");
+            for (index, split) in splits.iter().enumerate() {
+                html.push_str(&format!("\t\t\t\t[{}]: {}", index, encode_text(split)));
+                if index < splits.len() - 1 {
+                    html.push_str("<br>\n");
+                }
+            }
+            html.push_str("\t\t\t</td>\n");
+        }
+
         html.push_str("\t\t</tr>\n");
     }
 
@@ -189,8 +281,8 @@ fn handle_jsonp(callback: &str, html: String) -> Response<Body> {
 
     let test_output = TestOutput {
         success: true,
-        message: "OK".to_string(),
-        html: html,
+        message: None,
+        html,
     };
 
     let json_output = serde_json::to_string(&test_output).unwrap();
