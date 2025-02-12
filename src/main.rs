@@ -1,4 +1,3 @@
-
 use axum::{
     body::Body, extract::{DefaultBodyLimit, Query}, response::{IntoResponse, Response}, routing::{get, post}, Json, Router
 };
@@ -9,8 +8,13 @@ use serde::{Deserialize, Serialize};
 use tower_http::{limit::RequestBodyLimitLayer, services::ServeFile};
 use html_escape::encode_text;
 
+use signal_hook::consts::signal::{SIGINT, SIGTERM};
+use signal_hook_tokio::Signals;
+
 #[tokio::main]
 async fn main() {
+    setup_signal_handlers().await;
+
     // build our application with a single route
     let app = Router::new()
         //.route_service("/", get(|| async { axum::Redirect::temporary("https://www.regexplanet.com/advanced/rust/index.html") }))
@@ -35,6 +39,16 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(listen).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn setup_signal_handlers() {
+    let signals = Signals::new(&[SIGINT, SIGTERM]).unwrap();
+    tokio::spawn(async move {
+        for _ in signals.forever() {
+            println!("INFO: Received termination signal, shutting down...");
+            std::process::exit(0);
+        }
+    });
 }
 
 #[derive(Debug, Deserialize)]
