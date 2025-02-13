@@ -1,15 +1,15 @@
-FROM rust:1-bookworm as builder
+FROM rust:latest AS builder
 
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    dumb-init
+RUN rustup target add x86_64-unknown-linux-musl
+RUN apt update && apt install -y musl-tools musl-dev
 
 WORKDIR /app
 COPY . .
-RUN cargo build --bins --release
+RUN cargo build --target x86_64-unknown-linux-musl --release
 
-FROM debian:bookworm-slim
-LABEL org.opencontainers.image.source https://github.com/regexplanet/regexplanet-rust
+RUN find .
+
+FROM scratch
 
 ARG COMMIT="(not set)"
 ARG LASTMOD="(not set)"
@@ -17,9 +17,6 @@ ENV COMMIT=$COMMIT
 ENV LASTMOD=$LASTMOD
 
 WORKDIR /app
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
-COPY --from=builder /app/target/release/regexplanet-rust /app/regexplanet-rust
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/regexplanet-rust /app/regexplanet-rust
 COPY ./static /app/static
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/app/regexplanet-rust"]

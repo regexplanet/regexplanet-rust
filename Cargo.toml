@@ -8,6 +8,7 @@ axum = "0.7.5"
 axum-extra = { version = "0.9.3", features = ["form"] }
 base64 = "0.22.1"
 chrono = "0.4.38"
+ctrlc = { version = "3.4.5", features = ["termination"] }
 html-escape = "0.2.13"
 regex = "1.10.6"
 rustc_version_runtime = "0.3.0"
